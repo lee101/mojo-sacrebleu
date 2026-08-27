@@ -1,6 +1,6 @@
 """Exact n-gram statistics and edit-distance kernels."""
 
-from std.algorithm import parallelize
+from max.algorithm import parallelize
 from std.sys.info import simd_width_of
 
 
@@ -113,7 +113,7 @@ def batch_pair_ngram_stats(
     parallel_threshold: Int,
     stats: IPtr,
 ):
-    @parameter
+    @__parameter
     def work(pair_index: Int):
         var hyp_begin = Int(offsets[2 * pair_index])
         var ref_begin = Int(offsets[2 * pair_index + 1])
@@ -143,7 +143,7 @@ def batch_bleu_stats(
     parallel_threshold: Int,
     stats: IPtr,
 ):
-    @parameter
+    @__parameter
     def work(sentence_index: Int):
         var sequence_begin = Int(sentence_offsets[sentence_index])
         var sequence_end = Int(sentence_offsets[sentence_index + 1])
