@@ -74,16 +74,31 @@ def _trace_to_alignment(trace: list[int]) -> tuple[dict[int, int], list[int], li
     return align, ref_err, hyp_err
 
 
-def _find_shifted_pairs(hypothesis: list[str], reference: list[str]):
-    for start_h in range(len(hypothesis)):
-        for start_r in range(len(reference)):
-            if abs(start_r - start_h) > _MAX_SHIFT_DIST:
+def _find_shifted_pairs(
+    hypothesis: list[str],
+    reference: list[str],
+    reference_positions: dict[str, list[int]],
+):
+    hyp_len = len(hypothesis)
+    ref_len = len(reference)
+    for start_h in range(hyp_len):
+        first_ref = max(0, start_h - _MAX_SHIFT_DIST)
+        last_ref = min(ref_len, start_h + _MAX_SHIFT_DIST + 1)
+        for start_r in reference_positions.get(hypothesis[start_h], ()):
+            if start_r < first_ref:
                 continue
+            if start_r >= last_ref:
+                break
+            max_length = _MAX_SHIFT_SIZE
+            remaining = hyp_len - start_h
+            if remaining < max_length:
+                max_length = remaining
+            remaining = ref_len - start_r
+            if remaining < max_length:
+                max_length = remaining
             length = 0
             while (
-                length < _MAX_SHIFT_SIZE
-                and start_h + length < len(hypothesis)
-                and start_r + length < len(reference)
+                length < max_length
                 and hypothesis[start_h + length] == reference[start_r + length]
             ):
                 length += 1
@@ -116,17 +131,26 @@ def _perform_shift(words: list[str], start: int, length: int, target: int) -> li
 def _shift(
     hypothesis: list[str],
     reference: list[str],
+    reference_positions: dict[str, list[int]],
     edit_distance: _EditDistance,
     checked: int,
 ) -> tuple[int, list[str], int]:
     pre_score, inverse_trace = edit_distance(hypothesis)
     align, ref_err, hyp_err = _trace_to_alignment(inverse_trace)
     best = None
+    hyp_err_prefix = [0]
+    ref_err_prefix = [0]
+    for error in hyp_err:
+        hyp_err_prefix.append(hyp_err_prefix[-1] + error)
+    for error in ref_err:
+        ref_err_prefix.append(ref_err_prefix[-1] + error)
 
-    for start_h, start_r, length in _find_shifted_pairs(hypothesis, reference):
-        if sum(hyp_err[start_h : start_h + length]) == 0:
+    for start_h, start_r, length in _find_shifted_pairs(
+        hypothesis, reference, reference_positions
+    ):
+        if hyp_err_prefix[start_h + length] == hyp_err_prefix[start_h]:
             continue
-        if sum(ref_err[start_r : start_r + length]) == 0:
+        if ref_err_prefix[start_r + length] == ref_err_prefix[start_r]:
             continue
         if start_h <= align[start_r] < start_h + length:
             continue
@@ -165,11 +189,16 @@ def translation_edit_rate(hypothesis: list[str], reference: list[str]) -> tuple[
     if not reference:
         return len(hypothesis), 0
     edit_distance = _EditDistance(hypothesis, reference)
+    reference_positions: dict[str, list[int]] = {}
+    for index, word in enumerate(reference):
+        reference_positions.setdefault(word, []).append(index)
     shifted = hypothesis
     shifts = 0
     checked = 0
     while True:
-        delta, candidate, checked = _shift(shifted, reference, edit_distance, checked)
+        delta, candidate, checked = _shift(
+            shifted, reference, reference_positions, edit_distance, checked
+        )
         if checked >= _MAX_SHIFT_CANDIDATES or delta <= 0:
             break
         shifts += 1

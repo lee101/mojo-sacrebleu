@@ -67,17 +67,20 @@ tokenization, buffer preparation, and result construction.
 
 | case | mojo-sacrebleu | sacrebleu | relative |
 | --- | ---: | ---: | ---: |
-| BLEU, 4k x 24 tokens | 86.1 ms | 707.7 ms | 8.22x faster |
-| chrF, 800 x 28 tokens | 39.2 ms | 281.7 ms | 7.19x faster |
-| chrF++, 800 x 28 tokens | 59.1 ms | 465.9 ms | 7.89x faster |
-| TER substitutions, 80 x 26 tokens | 21.6 ms | 89.1 ms | 4.13x faster |
-| TER shifts, 30 x 24 tokens | 83.6 ms | 531.4 ms | 6.35x faster |
+| BLEU, 4k x 24 tokens | 66.0 ms | 423.8 ms | 6.42x faster |
+| chrF, 800 x 28 tokens | 40.6 ms | 286.5 ms | 7.05x faster |
+| chrF++, 800 x 28 tokens | 72.7 ms | 354.5 ms | 4.88x faster |
+| TER substitutions, 80 x 26 tokens | 10.9 ms | 46.6 ms | 4.29x faster |
+| TER shifts, 30 x 24 tokens | 37.9 ms | 479.0 ms | 12.64x faster |
 
 Run `pixi run bench` to reproduce the table. TER shift search benefits most
 because each candidate's dynamic-programming matrix is evaluated in compiled
 Mojo rather than Python.
 
-GPU acceleration is not included.
+GPU acceleration is not included. The n-gram kernels are comparison- and
+memory-dominated, while TER edit distance has serial row dependencies; none
+has the arithmetic intensity needed to justify device transfer and launch
+overhead.
 
 ## How it works
 
