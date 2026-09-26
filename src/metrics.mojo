@@ -1,6 +1,5 @@
 """Exact n-gram statistics and edit-distance kernels."""
 
-from max.algorithm import parallelize
 from std.sys.info import simd_width_of
 
 
@@ -110,11 +109,9 @@ def batch_pair_ngram_stats(
     offsets: IPtr,
     pair_count: Int,
     max_order: Int,
-    parallel_threshold: Int,
     stats: IPtr,
 ):
-    @__parameter
-    def work(pair_index: Int):
+    for pair_index in range(pair_count):
         var hyp_begin = Int(offsets[2 * pair_index])
         var ref_begin = Int(offsets[2 * pair_index + 1])
         var end = Int(offsets[2 * pair_index + 2])
@@ -127,12 +124,6 @@ def batch_pair_ngram_stats(
             stats + pair_index * 3 * max_order,
         )
 
-    if pair_count >= parallel_threshold:
-        parallelize[work](pair_count)
-    else:
-        for pair_index in range(pair_count):
-            work(pair_index)
-
 
 def batch_bleu_stats(
     data: IPtr,
@@ -140,11 +131,9 @@ def batch_bleu_stats(
     sentence_offsets: IPtr,
     sentence_count: Int,
     max_order: Int,
-    parallel_threshold: Int,
     stats: IPtr,
 ):
-    @__parameter
-    def work(sentence_index: Int):
+    for sentence_index in range(sentence_count):
         var sequence_begin = Int(sentence_offsets[sentence_index])
         var sequence_end = Int(sentence_offsets[sentence_index + 1])
         var hyp_begin = Int(sequence_offsets[sequence_begin])
@@ -158,12 +147,6 @@ def batch_bleu_stats(
             max_order,
             stats + sentence_index * 2 * max_order,
         )
-
-    if sentence_count >= parallel_threshold:
-        parallelize[work](sentence_count)
-    else:
-        for sentence_index in range(sentence_count):
-            work(sentence_index)
 
 
 def edit_distance(

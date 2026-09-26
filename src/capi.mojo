@@ -118,7 +118,6 @@ def msb_batch_pair_ngram_stats(
         sequence_offsets,
         pair_count,
         max_order,
-        parallel_threshold,
         iptr(stats),
     )
     return 0
@@ -166,7 +165,6 @@ def msb_batch_bleu_stats(
         sentences,
         sentence_count,
         max_order,
-        parallel_threshold,
         iptr(stats),
     )
     return 0

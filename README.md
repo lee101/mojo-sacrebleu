@@ -88,10 +88,11 @@ Python performs Unicode normalization and tokenization so public behavior
 stays compatible with SacreBLEU. Tokens or characters are then assigned
 integer IDs and packed into contiguous NumPy `int64` arrays. Large BLEU and
 chrF corpora cross the FFI boundary in batches and are split into independent
-rows with thresholded CPU parallelism; small inputs stay serial. The Mojo
-kernels compute clipped BLEU counts, chrF n-gram intersections, and TER
-edit-distance matrices. N-grams are compared exactly with SIMD plus scalar
-tail handling; no probabilistic hashes or collision assumptions affect scores.
+rows in a single-threaded loop inside the kernel; small inputs take the same
+path. The Mojo kernels compute clipped BLEU counts, chrF n-gram intersections,
+and TER edit-distance matrices. N-grams are compared exactly with SIMD plus
+scalar tail handling; no probabilistic hashes or collision assumptions affect
+scores.
 
 The shared library exposes non-parametric `@export` functions using
 `abi("C")`. NumPy owns every input, output, and scratch allocation. Buffers

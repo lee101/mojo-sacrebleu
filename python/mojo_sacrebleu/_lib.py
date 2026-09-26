@@ -31,6 +31,25 @@ class BuildError(RuntimeError):
     pass
 
 
+def _link_args() -> list[str]:
+    """Record the AsyncRT runtime that ctypes resolves through this library."""
+    mojo = shutil.which("mojo") or os.environ.get("MOJO_SACREBLEU_MOJO", "")
+    candidates = [
+        os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(mojo))), "lib"),
+        os.path.join(os.environ.get("CONDA_PREFIX", ""), "lib"),
+    ]
+    for lib_dir in candidates:
+        if os.path.isfile(os.path.join(lib_dir, "libKGENCompilerRTShared.so")):
+            return [
+                "-Xlinker", "--no-as-needed",
+                "-Xlinker", f"-L{lib_dir}",
+                "-Xlinker", "-lKGENCompilerRTShared",
+                "-Xlinker", "-lAsyncRTMojoBindings",
+                "-Xlinker", "--as-needed",
+            ]
+    raise BuildError("cannot locate the Mojo toolchain lib directory")
+
+
 def _mojo_command() -> list[str]:
     override = os.environ.get("MOJO_SACREBLEU_MOJO")
     if override:
@@ -66,7 +85,7 @@ def build(force: bool = False) -> str:
         os.path.join(SRC, "capi.mojo"),
         "-o",
         LIB,
-    ]
+    ] + _link_args()
     proc = subprocess.run(cmd, capture_output=True, text=True, timeout=1800)
     if proc.returncode or not os.path.exists(LIB):
         raise BuildError((proc.stderr or proc.stdout).strip()[:4000])
