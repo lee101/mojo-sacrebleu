@@ -16,7 +16,7 @@ def same_ngram(a: IPtr, ai: Int, b: IPtr, bi: Int, order: Int) -> Bool:
     comptime W = simd_width_of[DType.float64]()
     var k = 1
     while k + W <= order:
-        var matches = a.load[width=W](ai + k).eq(b.load[width=W](bi + k))
+        var matches = a.unsafe_load[width=W](ai + k).eq(b.unsafe_load[width=W](bi + k))
         if not matches.reduce_and():
             return False
         k += W
